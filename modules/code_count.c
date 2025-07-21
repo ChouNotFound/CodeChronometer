@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "student_management.h"
 
 #define MAX 256  // 定义最大路径长度
 
@@ -14,8 +15,8 @@ void findAllCFiles(const char *path, long *total);  // 查找所有C文件
 void findAllSubDirs(const char *path, long *total);  // 查找所有子目录
 void safePathConcat(char *dest, size_t destSize, const char *dir, const char *file);  // 安全拼接路径
 
-// 主函数
-int main() {
+// 新增的代码统计功能函数
+void run_code_count() {
     char path[MAX] = ".";  // 默认当前目录
     long total = 0;  // 初始化总行数为0
 
@@ -24,7 +25,20 @@ int main() {
     findAllCFiles(path, &total);  // 统计当前目录下的C文件
     findAllSubDirs(path, &total);  // 统计子目录中的C文件
 
-    printf("目前总共写了 %ld 行代码。\n", total);  // 输出统计结果
+    printf("当前共写了 %ld 行代码。\n", total);  // 输出统计结果
+}
+
+// 主函数（保留原有功能，但将其重命名为test_code_count以便测试）
+int test_code_count() {
+    char path[MAX] = ".";  // 默认当前目录
+    long total = 0;  // 初始化总行数为0
+
+    printf("统计中...\n");  // 提示用户正在统计
+
+    findAllCFiles(path, &total);  // 统计当前目录下的C文件
+    findAllSubDirs(path, &total);  // 统计子目录中的C文件
+
+    printf("当前共写了 %ld 行代码。\n", total);  // 输出统计结果
 
     return 0;
 }
@@ -45,16 +59,16 @@ int countLines(const char *filename) {
     // 逐个字符读取文件
     while ((temp = fgetc(fp)) != EOF) {
         if (temp == '\n') {
-            count++;  // 遇到换行符则行数加1
+            count++;  // 遇到换行符则行数+1
         }
         prev = temp;  // 记录当前字符
     }
 
     // 根据文件结尾情况调整行数
     if (prev != '\n' && count > 0) {
-        count++;  // 文件最后没有换行符，但有内容，行数加1
+        count++;  // 文件最后没有换行符，但有内容，行数+1
     } else if (count == 0 && prev != EOF) {
-        count = 1;  // 空文件但有内容（可能为单个字符），行数为1
+        count = 1;  // 空文件但有内容（可能是一个字符），行数+1
     }
 
     fclose(fp);  // 关闭文件
@@ -73,13 +87,13 @@ void findAllCFiles(const char *path, long *total) {
     // 开始搜索
     if ((handle = _findfirst(thePath, &fa)) != -1L) {
         do {
-            // 跳过.和..目录
+            // 跳过. .. ...
             if (strcmp(fa.name, ".") && strcmp(fa.name, "..")) {
                 // 构造完整文件路径
                 safePathConcat(target, sizeof(target), path, fa.name);
                 // 统计文件行数
                 int lines = countLines(target);
-                // 累加到总行数
+                // 加到总行数
                 *total += lines;
                 // 打印文件行数信息
                 printf("%s - %d 行\n", target, lines);
@@ -102,7 +116,7 @@ void findAllSubDirs(const char *path, long *total) {
     // 开始搜索
     if ((handle = _findfirst(thePath, &fa)) != -1L) {
         do {
-            // 跳过.和..目录
+            // 跳过. .. ...
             if (strcmp(fa.name, ".") && strcmp(fa.name, "..")) {
                 // 如果是子目录
                 if (fa.attrib & _A_SUBDIR) {
@@ -122,7 +136,7 @@ void findAllSubDirs(const char *path, long *total) {
 
 // 安全拼接路径
 void safePathConcat(char *dest, size_t destSize, const char *dir, const char *file) {
-    // 使用snprintf确保不会溢出
+    // 使用snprintf保证不会溢出
     int len = snprintf(dest, destSize, "%s/%s", dir, file);
     // 如果发生溢出，报错并退出
     if (len >= destSize) {
