@@ -4,6 +4,8 @@
 #include <stdio.h>
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>  // 添加Linux下的usleep支持
 #endif
 
 int main() 
@@ -16,7 +18,7 @@ int main()
         typeWriterEffect("Enter your choice (1-2): ");
         
         int choice;
-        scanf("%d", &choice);
+        (void)scanf("%d", &choice);  // 显式忽略scanf返回值
         
         int c;
         while ((c = getchar()) != '\n' && c != EOF);
