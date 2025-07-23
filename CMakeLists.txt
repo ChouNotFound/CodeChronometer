@@ -2,17 +2,15 @@
 cmake_minimum_required(VERSION 3.10)
 
 # 修改项目名称为更具描述性的名称
-project(CodeStatisticsSystem C)  # 更明确的项目名称
+project(CodeChronometer C)  # 修改回原始项目名称以匹配实际需求
 
 # 添加C标准支持
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-# 使用更现代的编译器选项
-include_directories(include)
-
-# 收集源文件（使用更明确的模式）
-file(GLOB_RECURSE SRC_FILES "src/*.c")
+# 使用CMAKE_SOURCE_DIR确保绝对路径正确
+include_directories(${CMAKE_SOURCE_DIR}/include)
+file(GLOB_RECURSE SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.c")
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
