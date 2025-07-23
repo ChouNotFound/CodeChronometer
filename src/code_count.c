@@ -4,14 +4,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <io.h>
-#include <errno.h>
+#include <sys/stat.h>
 
 // 跨平台头文件处理
 #ifdef _WIN32
+#include <io.h>
 #include <windows.h>
 #else
 #include <unistd.h>
+#include <dirent.h>
 #endif
 
 // 宏定义
@@ -28,21 +29,26 @@ static void addFileToList(FileList* fileList, const char* filename, long line_co
 static void printFileList(const FileList* fileList, FILE* outFile);
 
 // 辅助函数实现
-int peekc(FILE *fp) 
+int peekc(FILE *fp)
 {
     int ch = fgetc(fp);
     ungetc(ch, fp);
     return ch;
 }
 
-void safePathConcat(char *dest, size_t size, const char *path1, const char *path2) 
+void safePathConcat(char *dest, size_t size, const char *path1, const char *path2)
 {
     strncpy(dest, path1, size-1);
+    #ifdef _WIN32
     strncat(dest, "\\", size-strlen(dest)-1);
+    #else
+    strncat(dest, "/", size-strlen(dest)-1);
+    #endif
     strncat(dest, path2, size-strlen(dest)-1);
 }
 
-void addFileToList(FileList* fileList, const char* filename, long line_count) {
+void addFileToList(FileList* fileList, const char* filename, long line_count)
+{
     if (fileList->size >= fileList->capacity) {
         fileList->capacity = fileList->capacity == 0 ? 4 : fileList->capacity * 2;
         fileList->data = realloc(fileList->data, fileList->capacity * sizeof(FileInfo));
@@ -65,7 +71,6 @@ void printFileList(const FileList* fileList, FILE* outFile)
         }
     }
 }
-
 
 // 主函数
 void run_code_count()
@@ -111,22 +116,24 @@ void run_code_count()
     #ifdef _WIN32
     Sleep(2000);
     #else
-    usleep(2000000);
+    sleep(2);
     #endif
-    
-    // 释放内存
-    free(fileList.data);
     
     // 关闭输出文件
     if (outFile)
     {
         fclose(outFile);
     }
+    
+    // 释放内存
+    free(fileList.data);
 }
 
-// Windows特有的文件查找函数
-void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileList) {
+// 跨平台目录遍历函数
+void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileList)
+{
     char searchPath[MAX];
+    #ifdef _WIN32
     struct _finddata_t fileinfo;
     intptr_t handle;
     
@@ -168,10 +175,52 @@ void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileL
         
         _findclose(handle);
     }
+    #else
+    DIR* dir;
+    struct dirent* entry;
+    
+    if ((dir = opendir(path)) != NULL) {
+        while ((entry = readdir(dir)) != NULL) {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                continue;
+            }
+            
+            // 跳过build目录
+            if (strcmp(entry->d_name, "build") == 0) {
+                continue;
+            }
+            
+            char filePath[MAX];
+            safePathConcat(filePath, MAX, path, entry->d_name);
+            
+            struct stat st;
+            if (stat(filePath, &st) == 0 && S_ISDIR(st.st_mode)) {
+                findAllSubDirsForSourceFiles(filePath, total, fileList);
+            } else {
+                const char *ext = strrchr(entry->d_name, '.');
+                if (ext && (strcmp(ext, ".c") == 0 || strcmp(ext, ".h") == 0 || 
+                            strcmp(ext, ".py") == 0 || strcmp(ext, ".java") == 0 || 
+                            strcmp(ext, ".cpp") == 0 || strcmp(ext, ".js") == 0 || 
+                            strcmp(ext, ".ts") == 0 || strcmp(ext, ".md") == 0)) {
+                    // 跳过CMake相关的文件
+                    if (strstr(entry->d_name, "CMake") != NULL) {
+                        continue;
+                    }
+                    
+                    int lines = countLines(filePath);
+                    *total += lines;
+                    addFileToList(fileList, entry->d_name, lines);
+                }
+            }
+        }
+        closedir(dir);
+    }
+    #endif
 }
 
-// Implement file line counting function
-int countLines(const char *filename) {
+// 实现文件行数统计函数
+int countLines(const char *filename)
+{
     FILE *fp = fopen(filename, "r");
     if (!fp) {
         perror("Failed to open file");
@@ -180,27 +229,27 @@ int countLines(const char *filename) {
 
     int count = 0;
     int ch;
-    int in_comment = 0;  // Comment handling
+    int in_comment = 0;  // 注释处理
     
-    // Optimized reading approach
+    // 优化的读取方式
     while ((ch = fgetc(fp)) != EOF) {
         if (!in_comment) {
             if (ch == '\n') {
                 count++;
             }
         }
-        // Simple C-style comment handling
+        // 简单的C风格注释处理
         if (ch == '/' && (peekc(fp) == '*')) {
             in_comment = 1;
-            fgetc(fp);  // consume '*'
+            fgetc(fp);  // 消耗'*'
         }
         else if (ch == '*' && (peekc(fp) == '/')) {
             in_comment = 0;
-            fgetc(fp);  // consume '/'
+            fgetc(fp);  // 消耗'/'
         }
     }
     
-    // Handle case where file ends without a newline
+    // 处理文件未以换行结尾的情况
     if (ch != '\n' && count > 0) {
         count++;
     }
