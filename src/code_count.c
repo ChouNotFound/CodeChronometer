@@ -1,146 +1,181 @@
-#include <io.h>
-#include <direct.h>
+// code_count.c
+#include "code_count.h"
+#include "typewriter.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "student_management.h"
+#include <io.h>
+#include <errno.h>
 
-#define MAX 256  // 定义最大路径长度
+// 跨平台头文件处理
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
-long total;  // 用于存储总行数
+// 宏定义
+#define MAX 1024
 
 // 函数声明
-int countLines(const char *filename);  // 统计单个文件的行数
-void findAllCFiles(const char *path, long *total);  // 查找所有C文件
-void findAllSubDirs(const char *path, long *total);  // 查找所有子目录
-void safePathConcat(char *dest, size_t destSize, const char *dir, const char *file);  // 安全拼接路径
+void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileList);
+int countLines(const char *filename);
 
-// 新增的代码统计功能函数
+// 辅助函数声明
+static int peekc(FILE *fp);
+static void safePathConcat(char *dest, size_t size, const char *path1, const char *path2);
+static void addFileToList(FileList* fileList, const char* filename, long line_count);
+static void printFileList(const FileList* fileList);
+
+// 辅助函数实现
+int peekc(FILE *fp) 
+{
+    int ch = fgetc(fp);
+    ungetc(ch, fp);
+    return ch;
+}
+
+void safePathConcat(char *dest, size_t size, const char *path1, const char *path2) 
+{
+    strncpy(dest, path1, size-1);
+    strncat(dest, "\\", size-strlen(dest)-1);
+    strncat(dest, path2, size-strlen(dest)-1);
+}
+
+void addFileToList(FileList* fileList, const char* filename, long line_count) {
+    if (fileList->size >= fileList->capacity) {
+        fileList->capacity = fileList->capacity == 0 ? 4 : fileList->capacity * 2;
+        fileList->data = realloc(fileList->data, fileList->capacity * sizeof(FileInfo));
+    }
+    strncpy(fileList->data[fileList->size].filename, filename, 255);
+    fileList->data[fileList->size].line_count = line_count;
+    fileList->size++;
+}
+
+void printFileList(const FileList* fileList) {
+    for (size_t i = 0; i < fileList->size; i++) {
+        char line[100];
+        snprintf(line, sizeof(line), "%-30s %ld lines", fileList->data[i].filename, fileList->data[i].line_count);
+        typeWriterEffect(line);
+    }
+}
+
+
+// 主函数
 void run_code_count() {
-    char path[MAX] = ".";  // 默认当前目录
-    long total = 0;  // 初始化总行数为0
-
-    printf("统计中...\n");  // 提示用户正在统计
-
-    findAllCFiles(path, &total);  // 统计当前目录下的C文件
-    findAllSubDirs(path, &total);  // 统计子目录中的C文件
-
-    printf("当前共写了 %ld 行代码。\n", total);  // 输出统计结果
+    long total = 0;
+    FileList fileList = {0};
+    
+    // 递归查找源文件
+    findAllSubDirsForSourceFiles("..", &total, &fileList);
+    
+    // 打印标题
+    typeWriterEffect("\n=== Code Statistics Report ===\n");
+    
+    // 打印文件列表
+    for (size_t i = 0; i < fileList.size; i++) {
+        char line[100];
+        snprintf(line, sizeof(line), "%-30s %ld lines\n", fileList.data[i].filename, fileList.data[i].line_count);
+        typeWriterEffect(line);
+    }
+    
+    typeWriterEffect("------------------------\n");
+    char total_line[50];
+    snprintf(total_line, sizeof(total_line), "Total: %ld lines\n", total);
+    typeWriterEffect(total_line);
+    
+    // 等待2秒
+    #ifdef _WIN32
+    Sleep(2000);
+    #else
+    usleep(2000000);
+    #endif
+    
+    // 释放内存
+    free(fileList.data);
 }
 
-// 主函数（保留原有功能，但将其重命名为test_code_count以便测试）
-int test_code_count() {
-    char path[MAX] = ".";  // 默认当前目录
-    long total = 0;  // 初始化总行数为0
-
-    printf("统计中...\n");  // 提示用户正在统计
-
-    findAllCFiles(path, &total);  // 统计当前目录下的C文件
-    findAllSubDirs(path, &total);  // 统计子目录中的C文件
-
-    printf("当前共写了 %ld 行代码。\n", total);  // 输出统计结果
-
-    return 0;
+// Windows特有的文件查找函数
+void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileList) {
+    char searchPath[MAX];
+    struct _finddata_t fileinfo;
+    intptr_t handle;
+    
+    safePathConcat(searchPath, MAX, path, "*");
+    
+    if ((handle = _findfirst(searchPath, &fileinfo)) != -1) {
+        do {
+            if (strcmp(fileinfo.name, ".") == 0 || strcmp(fileinfo.name, "..") == 0) {
+                continue;
+            }
+            
+            // 跳过build目录
+            if (strcmp(fileinfo.name, "build") == 0) {
+                continue;
+            }
+            
+            char filePath[MAX];
+            safePathConcat(filePath, MAX, path, fileinfo.name);
+            
+            if (fileinfo.attrib & _A_SUBDIR) {
+                findAllSubDirsForSourceFiles(filePath, total, fileList);
+            } else {
+                const char *ext = strrchr(fileinfo.name, '.');
+                if (ext && (strcmp(ext, ".c") == 0 || strcmp(ext, ".h") == 0 || 
+                            strcmp(ext, ".py") == 0 || strcmp(ext, ".java") == 0 || 
+                            strcmp(ext, ".cpp") == 0 || strcmp(ext, ".js") == 0 || 
+                            strcmp(ext, ".ts") == 0 || strcmp(ext, ".md") == 0)) {
+                    // 跳过CMake相关的文件
+                    if (strstr(fileinfo.name, "CMake") != NULL) {
+                        continue;
+                    }
+                    
+                    int lines = countLines(filePath);
+                    *total += lines;
+                    addFileToList(fileList, fileinfo.name, lines);
+                }
+            }
+        } while (_findnext(handle, &fileinfo) == 0);
+        
+        _findclose(handle);
+    }
 }
 
-// 统计单个文件的行数
+// Implement file line counting function
 int countLines(const char *filename) {
-    FILE *fp;
-    int count = 0;
-    int temp;
-    int prev = '\n';  // 用于记录前一个字符
-
-    // 打开文件
-    if ((fp = fopen(filename, "r")) == NULL) {
-        fprintf(stderr, "文件打开失败：%s\n", filename);
+    FILE *fp = fopen(filename, "r");
+    if (!fp) {
+        perror("Failed to open file");
         return 0;
     }
 
-    // 逐个字符读取文件
-    while ((temp = fgetc(fp)) != EOF) {
-        if (temp == '\n') {
-            count++;  // 遇到换行符则行数+1
+    int count = 0;
+    int ch;
+    int in_comment = 0;  // Comment handling
+    
+    // Optimized reading approach
+    while ((ch = fgetc(fp)) != EOF) {
+        if (!in_comment) {
+            if (ch == '\n') {
+                count++;
+            }
         }
-        prev = temp;  // 记录当前字符
+        // Simple C-style comment handling
+        if (ch == '/' && (peekc(fp) == '*')) {
+            in_comment = 1;
+            fgetc(fp);  // consume '*'
+        }
+        else if (ch == '*' && (peekc(fp) == '/')) {
+            in_comment = 0;
+            fgetc(fp);  // consume '/'
+        }
     }
-
-    // 根据文件结尾情况调整行数
-    if (prev != '\n' && count > 0) {
-        count++;  // 文件最后没有换行符，但有内容，行数+1
-    } else if (count == 0 && prev != EOF) {
-        count = 1;  // 空文件但有内容（可能是一个字符），行数+1
+    
+    // Handle case where file ends without a newline
+    if (ch != '\n' && count > 0) {
+        count++;
     }
-
-    fclose(fp);  // 关闭文件
-    return count;  // 返回行数
-}
-
-// 查找所有C文件并统计行数
-void findAllCFiles(const char *path, long *total) {
-    struct _finddata_t fa;  // 文件信息结构体
-    long handle;  // 文件句柄
-    char thePath[MAX], target[MAX];  // 路径缓冲区
-
-    // 构造搜索路径
-    snprintf(thePath, sizeof(thePath), "%s/*.c", path);
-
-    // 开始搜索
-    if ((handle = _findfirst(thePath, &fa)) != -1L) {
-        do {
-            // 跳过. .. ...
-            if (strcmp(fa.name, ".") && strcmp(fa.name, "..")) {
-                // 构造完整文件路径
-                safePathConcat(target, sizeof(target), path, fa.name);
-                // 统计文件行数
-                int lines = countLines(target);
-                // 加到总行数
-                *total += lines;
-                // 打印文件行数信息
-                printf("%s - %d 行\n", target, lines);
-            }
-        } while (_findnext(handle, &fa) == 0);  // 继续搜索下一个文件
-    }
-
-    _findclose(handle);  // 关闭搜索句柄
-}
-
-// 查找所有子目录
-void findAllSubDirs(const char *path, long *total) {
-    struct _finddata_t fa;  // 文件信息结构体
-    long handle;  // 文件句柄
-    char thePath[MAX], target[MAX];  // 路径缓冲区
-
-    // 构造搜索路径
-    snprintf(thePath, sizeof(thePath), "%s/*", path);
-
-    // 开始搜索
-    if ((handle = _findfirst(thePath, &fa)) != -1L) {
-        do {
-            // 跳过. .. ...
-            if (strcmp(fa.name, ".") && strcmp(fa.name, "..")) {
-                // 如果是子目录
-                if (fa.attrib & _A_SUBDIR) {
-                    // 构造完整子目录路径
-                    safePathConcat(target, sizeof(target), path, fa.name);
-                    // 统计子目录中的C文件
-                    findAllCFiles(target, total);
-                    // 递归查找子目录中的子目录
-                    findAllSubDirs(target, total);
-                }
-            }
-        } while (_findnext(handle, &fa) == 0);  // 继续搜索下一个文件
-    }
-
-    _findclose(handle);  // 关闭搜索句柄
-}
-
-// 安全拼接路径
-void safePathConcat(char *dest, size_t destSize, const char *dir, const char *file) {
-    // 使用snprintf保证不会溢出
-    int len = snprintf(dest, destSize, "%s/%s", dir, file);
-    // 如果发生溢出，报错并退出
-    if (len >= destSize) {
-        fprintf(stderr, "路径拼接溢出：%s/%s\n", dir, file);
-        exit(EXIT_FAILURE);
-    }
+    
+    fclose(fp);
+    return count;
 }

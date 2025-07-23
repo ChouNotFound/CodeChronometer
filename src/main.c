@@ -1,33 +1,38 @@
 // main.c
-#include "student_management.h"
-#include "code_count.h"  // 引入code_count功能的头文件
+#include "code_count.h"
+#include "typewriter.h"
+#include <stdio.h>
+#include <windows.h>
 
-int main() {
-    int choice;
-    
-    while (1) {
-        // 显示主菜单
-        printf("\n=== 主菜单 ===\n");
-        printf("1. 学生信息管理系统\n");
-        printf("2. 文件统计功能\n");
-        printf("3. 退出程序\n");
-        printf("请输入你的选择（1-3）：");
+int main() 
+{
+    while (1) 
+    {
+        typeWriterEffect("\n=== Code Statistics System ===\n");
+        typeWriterEffect("1. Run code statistics\n");
+        typeWriterEffect("2. Exit\n");
+        typeWriterEffect("Enter your choice (1-2): ");
+        
+        int choice;
         scanf("%d", &choice);
         
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+
         switch (choice) {
             case 1:
-                // 调用学生管理系统
-                run_student_management();
-                break;
-            case 2:
-                // 调用代码统计功能
                 run_code_count();
                 break;
-            case 3:
-                printf("感谢使用本程序，再见！\n");
+            case 2:
+                typeWriterEffect("\nThank you for using this program. Goodbye!\n");
+                #ifdef _WIN32
+                Sleep(1000);
+                #else
+                usleep(1000000);
+                #endif
                 return 0;
-            default:
-                printf("无效的选择，请输入1-3之间的数字\n");
+            case 3:
+                typeWriterEffect("\nInvalid choice. Please enter a number between 1 and 2\n");
         }
     }
     
