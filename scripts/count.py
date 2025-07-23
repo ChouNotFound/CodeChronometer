@@ -1,6 +1,5 @@
 import os
 import time
-import sys
 
 def type_writer_effect(text, delay=0.02, end=''):
     """逐字输出的打字机效果（支持自定义结束符）"""
