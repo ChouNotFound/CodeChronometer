@@ -63,7 +63,10 @@ void printFileList(const FileList* fileList, FILE* outFile)
     for (size_t i = 0; i < fileList->size; i++)
     {
         char line[100];
-        snprintf(line, sizeof(line), "%-30s %ld lines\n", fileList->data[i].filename, fileList->data[i].line_count);
+        // 限制文件名长度为20字符，确保总长度不超过缓冲区大小
+        snprintf(line, sizeof(line), "%-20s %ld lines\n", 
+                (strlen(fileList->data[i].filename) > 20) ? "..." : fileList->data[i].filename,
+                fileList->data[i].line_count);
         typeWriterEffect(line);
         if (outFile)
         {

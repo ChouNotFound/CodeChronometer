@@ -2,7 +2,9 @@
 #include "code_count.h"
 #include "typewriter.h"
 #include <stdio.h>
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 int main() 
 {
