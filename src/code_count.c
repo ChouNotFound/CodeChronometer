@@ -25,7 +25,7 @@ int countLines(const char *filename);
 static int peekc(FILE *fp);
 static void safePathConcat(char *dest, size_t size, const char *path1, const char *path2);
 static void addFileToList(FileList* fileList, const char* filename, long line_count);
-static void printFileList(const FileList* fileList);
+static void printFileList(const FileList* fileList, FILE* outFile);
 
 // 辅助函数实现
 int peekc(FILE *fp) 
@@ -52,37 +52,60 @@ void addFileToList(FileList* fileList, const char* filename, long line_count) {
     fileList->size++;
 }
 
-void printFileList(const FileList* fileList) {
-    for (size_t i = 0; i < fileList->size; i++) {
+void printFileList(const FileList* fileList, FILE* outFile)
+{
+    for (size_t i = 0; i < fileList->size; i++)
+    {
         char line[100];
-        snprintf(line, sizeof(line), "%-30s %ld lines", fileList->data[i].filename, fileList->data[i].line_count);
+        snprintf(line, sizeof(line), "%-30s %ld lines\n", fileList->data[i].filename, fileList->data[i].line_count);
         typeWriterEffect(line);
+        if (outFile)
+        {
+            fprintf(outFile, "%s", line);
+        }
     }
 }
 
 
 // 主函数
-void run_code_count() {
+void run_code_count()
+{
     long total = 0;
     FileList fileList = {0};
+    
+    // 打开输出文件
+    FILE* outFile = fopen("code_stats.txt", "w");
+    if (!outFile)
+    {
+        typeWriterEffect("Warning: 无法创建输出文件\n");
+    }
     
     // 递归查找源文件
     findAllSubDirsForSourceFiles("..", &total, &fileList);
     
     // 打印标题
     typeWriterEffect("\n=== Code Statistics Report ===\n");
-    
-    // 打印文件列表
-    for (size_t i = 0; i < fileList.size; i++) {
-        char line[100];
-        snprintf(line, sizeof(line), "%-30s %ld lines\n", fileList.data[i].filename, fileList.data[i].line_count);
-        typeWriterEffect(line);
+    if (outFile)
+    {
+        fprintf(outFile, "=== Code Statistics Report ===\n");
     }
     
+    // 打印文件列表
+    printFileList(&fileList, outFile);
+    
     typeWriterEffect("------------------------\n");
+    if (outFile)
+    {
+        fprintf(outFile, "------------------------\n");
+    }
+    
     char total_line[50];
     snprintf(total_line, sizeof(total_line), "Total: %ld lines\n", total);
     typeWriterEffect(total_line);
+    if (outFile)
+    {
+        fprintf(outFile, "%s", total_line);
+    }
     
     // 等待2秒
     #ifdef _WIN32
@@ -93,6 +116,12 @@ void run_code_count() {
     
     // 释放内存
     free(fileList.data);
+    
+    // 关闭输出文件
+    if (outFile)
+    {
+        fclose(outFile);
+    }
 }
 
 // Windows特有的文件查找函数
