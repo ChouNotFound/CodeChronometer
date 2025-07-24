@@ -1,26 +1,5 @@
 // code_count.c
 #include "code_count.h"
-#include "typewriter.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-
-// 跨平台头文件处理
-#ifdef _WIN32
-#include <io.h>
-#include <windows.h>
-#else
-#include <unistd.h>
-#include <dirent.h>
-#endif
-
-// 宏定义
-#define MAX 1024
-
-// 函数声明
-void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileList);
-int countLines(const char *filename);
 
 // 辅助函数声明
 static int peekc(FILE *fp);
@@ -28,7 +7,7 @@ static void safePathConcat(char *dest, size_t size, const char *path1, const cha
 static void addFileToList(FileList* fileList, const char* filename, long line_count);
 static void printFileList(const FileList* fileList, FILE* outFile);
 
-// 辅助函数实现
+// 读取文件中的下一个字符并放回，用于注释处理
 int peekc(FILE *fp)
 {
     int ch = fgetc(fp);
@@ -36,6 +15,7 @@ int peekc(FILE *fp)
     return ch;
 }
 
+// 安全拼接路径字符串，自动处理不同平台的路径分隔符
 void safePathConcat(char *dest, size_t size, const char *path1, const char *path2)
 {
     strncpy(dest, path1, size-1);
@@ -47,27 +27,58 @@ void safePathConcat(char *dest, size_t size, const char *path1, const char *path
     strncat(dest, path2, size-strlen(dest)-1);
 }
 
+// 将文件信息添加到文件列表中，自动扩展内存容量
 void addFileToList(FileList* fileList, const char* filename, long line_count)
 {
-    if (fileList->size >= fileList->capacity) {
-        fileList->capacity = fileList->capacity == 0 ? 4 : fileList->capacity * 2;
+    if (fileList->size >= fileList->capacity) 
+    {
+        // 首次扩容初始化容量为4，否则翻倍扩容
+        if (fileList->capacity == 0) 
+        {
+            fileList->capacity = 4;
+        } 
+        else 
+        {
+            fileList->capacity *= 2;
+        }
+        
+        // 重新分配内存空间
         fileList->data = realloc(fileList->data, fileList->capacity * sizeof(FileInfo));
     }
+    
+    // 拷贝文件名（限制最大长度255）
     strncpy(fileList->data[fileList->size].filename, filename, 255);
+    
+    // 记录行数并增加元素计数
     fileList->data[fileList->size].line_count = line_count;
     fileList->size++;
 }
 
+// 按照打字机动画效果输出文件列表信息
 void printFileList(const FileList* fileList, FILE* outFile)
 {
     for (size_t i = 0; i < fileList->size; i++)
     {
         char line[100];
-        // 限制文件名长度为20字符，确保总长度不超过缓冲区大小
-        snprintf(line, sizeof(line), "%-20s %ld lines\n", 
-                (strlen(fileList->data[i].filename) > 20) ? "..." : fileList->data[i].filename,
-                fileList->data[i].line_count);
+        // 准备显示用的文件名（超过20字符显示省略号）
+        const char* display_name = fileList->data[i].filename;
+        char truncated_name[24]; // 20字符+"..."+字符串终止符
+        
+        if (strlen(fileList->data[i].filename) > 20) 
+        {
+            strncpy(truncated_name, fileList->data[i].filename, 17);
+            truncated_name[17] = '\0';
+            strcat(truncated_name, "...");
+            display_name = truncated_name;
+        }
+        
+        // 格式化输出到缓冲区
+        snprintf(line, sizeof(line), "%-20s %ld lines\n", display_name, fileList->data[i].line_count);
+        
+        // 打字机效果输出
         typeWriterEffect(line);
+        
+        // 如果有文件句柄则写入文件
         if (outFile)
         {
             fprintf(outFile, "%s", line);
@@ -75,7 +86,7 @@ void printFileList(const FileList* fileList, FILE* outFile)
     }
 }
 
-// 主函数
+// 主函数：执行代码统计核心流程
 void run_code_count()
 {
     long total = 0;
@@ -132,7 +143,7 @@ void run_code_count()
     free(fileList.data);
 }
 
-// 跨平台目录遍历函数
+// 跨平台目录遍历函数：递归查找所有源代码文件
 void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileList)
 {
     char searchPath[MAX];
@@ -221,7 +232,7 @@ void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileL
     #endif
 }
 
-// 实现文件行数统计函数
+// 实现文件行数统计函数：支持C风格注释过滤的行数统计
 int countLines(const char *filename)
 {
     FILE *fp = fopen(filename, "r");

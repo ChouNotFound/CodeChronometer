@@ -1,31 +1,37 @@
-// code_count.h  改进版
-#pragma once
-
 #ifndef CODE_COUNT_H
 #define CODE_COUNT_H
 
-// 定义必要类型
-#include <stddef.h>  // 为了使用size_t类型
+#include "typewriter.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 
-// 公共接口类型定义
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <dirent.h>
+#endif
+
+#define MAX 1024
+
 typedef struct {
     char filename[256];
     long line_count;
 } FileInfo;
 
 typedef struct {
-    FileInfo* data;
-    size_t capacity;
+    FileInfo *data;
     size_t size;
+    size_t capacity;
 } FileList;
 
-// 模块接口函数声明
-void run_code_count();
-// 文件查找函数声明
 void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileList);
-// 行数统计函数声明
 int countLines(const char *filename);
-// 逐行输出函数声明
-void typeWriterEffect(const char *text);
+
+// 主函数声明
+void run_code_count();
 
 #endif // CODE_COUNT_H

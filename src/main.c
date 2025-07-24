@@ -2,10 +2,11 @@
 #include "code_count.h"
 #include "typewriter.h"
 #include <stdio.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <unistd.h>  // 添加Linux下的usleep支持
+#include <unistd.h>
 #endif
 
 int main() 
@@ -18,21 +19,22 @@ int main()
         typeWriterEffect("Enter your choice (1-2): ");
         
         int choice;
-        (void)scanf("%d", &choice);  // 显式忽略scanf返回值
+        (void)scanf("%d", &choice);
         
         int c;
         while ((c = getchar()) != '\n' && c != EOF);
 
-        switch (choice) {
+        switch (choice) 
+        {
             case 1:
                 run_code_count();
                 break;
             case 2:
-                typeWriterEffect("\nThank you for using this program. Goodbye!\n");
+                typeWriterEffect("\nThank you for using this program. Goodbye!");
                 #ifdef _WIN32
-                Sleep(1000);
+                Sleep(500);
                 #else
-                usleep(1000000);
+                usleep(500000);
                 #endif
                 return 0;
             case 3:
