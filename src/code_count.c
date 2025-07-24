@@ -1,5 +1,16 @@
 // code_count.c
 #include "code_count.h"
+#include <time.h>  // 确保时间函数头文件已包含
+
+#ifdef _WIN32
+#include <windows.h>
+#include <conio.h>  // Windows平台需要_conio.h头文件
+#include <direct.h>  // Windows平台需要_direct.h头文件用于_mkdir
+#else
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>  // Linux平台需要的头文件
+#endif
 
 // 辅助函数声明
 static int peekc(FILE *fp);
@@ -18,6 +29,16 @@ int peekc(FILE *fp)
 // 安全拼接路径字符串，自动处理不同平台的路径分隔符
 void safePathConcat(char *dest, size_t size, const char *path1, const char *path2)
 {
+    // 添加长度检查以避免缓冲区溢出
+    size_t path1_len = strlen(path1);
+    size_t path2_len = strlen(path2);
+    
+    if (size < path1_len + path2_len + 2) {
+        // 缓冲区太小，无法容纳拼接的路径
+        dest[0] = '\0';
+        return;
+    }
+    
     strncpy(dest, path1, size-1);
     #ifdef _WIN32
     strncat(dest, "\\", size-strlen(dest)-1);
@@ -87,48 +108,25 @@ void printFileList(const FileList* fileList, FILE* outFile)
 }
 
 // 主函数：执行代码统计核心流程
-void run_code_count()
+void run_code_count(const char *path)
 {
     long total = 0;
     FileList fileList = {0};
     
-    // 打开输出文件
-    FILE* outFile = fopen("code_stats.txt", "w");
-    if (!outFile)
-    {
-        typeWriterEffect("Warning: 无法创建输出文件\n");
-    }
-    else
-    {
-        typeWriterEffect("结果已保存到code_stats.txt\n");
-    }
-    
     // 递归查找源文件
-    findAllSubDirsForSourceFiles("..", &total, &fileList);
+    findAllSubDirsForSourceFiles(path, &total, &fileList);
     
     // 打印标题
     typeWriterEffect("\n=== Code Statistics Report ===\n");
-    if (outFile)
-    {
-        fprintf(outFile, "=== Code Statistics Report ===\n");
-    }
     
     // 打印文件列表
-    printFileList(&fileList, outFile);
+    printFileList(&fileList, NULL);
     
     typeWriterEffect("------------------------\n");
-    if (outFile)
-    {
-        fprintf(outFile, "------------------------\n");
-    }
     
     char total_line[50];
     snprintf(total_line, sizeof(total_line), "Total: %ld lines\n", total);
     typeWriterEffect(total_line);
-    if (outFile)
-    {
-        fprintf(outFile, "%s", total_line);
-    }
     
     // 等待2秒
     #ifdef _WIN32
@@ -137,14 +135,81 @@ void run_code_count()
     sleep(2);
     #endif
     
-    // 关闭输出文件
-    if (outFile)
-    {
-        fclose(outFile);
-    }
     
     // 释放内存
     free(fileList.data);
+}
+
+// 新增生成报告函数实现
+void generate_report() {
+    // 获取当前时间
+    time_t now = time(NULL);
+    if (now == (time_t)(-1)) {
+        typeWriterEffect("Error: 获取当前时间失败\n");
+        return;
+    }
+    
+    struct tm *current_time = localtime(&now);
+    if (current_time == NULL) {
+        typeWriterEffect("Error: 转换时间格式失败\n");
+        return;
+    }
+    
+    char time_str[20];
+    if (strftime(time_str, sizeof(time_str), "%Y-%m-%d_%H-%M-%S", current_time) == 0) {
+        typeWriterEffect("Error: 格式化时间失败\n");
+        return;
+    }
+    
+    // 创建reports目录（跨平台实现）
+#ifdef _WIN32
+// Windows平台使用mkdir的兼容实现
+if (mkdir("reports") != 0 && errno != EEXIST) {
+#else
+// Linux平台使用mkdir
+if (mkdir("reports", 0777) != 0 && errno != EEXIST) {
+#endif
+        typeWriterEffect("Warning: 创建reports目录失败（可能已存在）\n");
+    }
+    
+    // 构建带时间戳的文件名
+    char filename[256];
+    snprintf(filename, sizeof(filename), "reports/code_stats_%s.txt", time_str);
+    
+    // 打开输出文件
+    FILE* outFile = fopen(filename, "w");
+    if (!outFile) {
+        typeWriterEffect("Warning: 无法创建输出文件\n");
+        return;
+    }
+    
+    // 写入报告标题
+    fprintf(outFile, "=== Code Statistics Report ===\n");
+    fprintf(outFile, "Generated: %s\n", time_str);
+    fprintf(outFile, "============================\n\n");
+    
+    // 递归查找源文件并统计
+    long total = 0;
+    FileList fileList = {0};
+    findAllSubDirsForSourceFiles("..", &total, &fileList);
+    
+    // 写入文件列表
+    for (size_t i = 0; i < fileList.size; i++) {
+        fprintf(outFile, "%-25s %ld lines\n", fileList.data[i].filename, fileList.data[i].line_count);
+    }
+    
+    // 写入总计
+    fprintf(outFile, "\n------------------------\n");
+    fprintf(outFile, "Total: %ld lines\n", total);
+    
+    // 清理资源
+    fclose(outFile);
+    free(fileList.data);
+    
+    // 显示保存路径信息
+    char info_msg[256];
+    snprintf(info_msg, sizeof(info_msg), "\nReport generated successfully at %s\n", filename);
+    typeWriterEffect(info_msg);
 }
 
 // 跨平台目录遍历函数：递归查找所有源代码文件
@@ -241,13 +306,17 @@ int countLines(const char *filename)
 {
     FILE *fp = fopen(filename, "r");
     if (!fp) {
-        perror("Failed to open file");
+        // 修改错误处理逻辑，添加更详细的错误信息
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), "无法打开文件: %s\n", filename);
+        typeWriterEffect(error_msg);
         return 0;
     }
 
     int count = 0;
     int ch;
     int in_comment = 0;  // 注释处理
+    int prev_ch = 0;       // 用于跟踪前一个字符
     
     // 优化的读取方式
     while ((ch = fgetc(fp)) != EOF) {
@@ -257,18 +326,20 @@ int countLines(const char *filename)
             }
         }
         // 简单的C风格注释处理
-        if (ch == '/' && (peekc(fp) == '*')) {
+        if (!in_comment && ch == '/' && (peekc(fp) == '*')) {
             in_comment = 1;
             fgetc(fp);  // 消耗'*'
         }
-        else if (ch == '*' && (peekc(fp) == '/')) {
+        else if (in_comment && ch == '*' && (peekc(fp) == '/')) {
             in_comment = 0;
             fgetc(fp);  // 消耗'/'
         }
+        
+        prev_ch = ch;
     }
     
     // 处理文件未以换行结尾的情况
-    if (ch != '\n' && count > 0) {
+    if (prev_ch != '\n' && count > 0) {
         count++;
     }
     

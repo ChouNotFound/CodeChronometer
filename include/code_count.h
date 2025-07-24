@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>  // 确保时间函数头文件已包含
 
 #ifdef _WIN32
 #include <io.h>
@@ -32,6 +33,7 @@ void findAllSubDirsForSourceFiles(const char *path, long *total, FileList* fileL
 int countLines(const char *filename);
 
 // 主函数声明
-void run_code_count();
+void run_code_count(const char *path);
+void generate_report();  // 新增生成报告函数声明
 
 #endif // CODE_COUNT_H
