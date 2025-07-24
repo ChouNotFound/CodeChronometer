@@ -94,7 +94,7 @@ void printFileList(const FileList* fileList, FILE* outFile)
         }
         
         // 格式化输出到缓冲区
-        snprintf(line, sizeof(line), "%-20s %ld lines\n", display_name, fileList->data[i].line_count);
+        snprintf(line, sizeof(line), "%-20s %ld 行\n", display_name, fileList->data[i].line_count);
         
         // 打字机效果输出
         typeWriterEffect(line);
@@ -117,7 +117,7 @@ void run_code_count(const char *path)
     findAllSubDirsForSourceFiles(path, &total, &fileList);
     
     // 打印标题
-    typeWriterEffect("\n=== Code Statistics Report ===\n");
+    typeWriterEffect("\n=== 代码统计报告 ===\n");
     
     // 打印文件列表
     printFileList(&fileList, NULL);
@@ -125,7 +125,7 @@ void run_code_count(const char *path)
     typeWriterEffect("------------------------\n");
     
     char total_line[50];
-    snprintf(total_line, sizeof(total_line), "Total: %ld lines\n", total);
+    snprintf(total_line, sizeof(total_line), "总计行数: %ld 行\n", total);
     typeWriterEffect(total_line);
     
     // 等待2秒
@@ -145,19 +145,19 @@ void generate_report() {
     // 获取当前时间
     time_t now = time(NULL);
     if (now == (time_t)(-1)) {
-        typeWriterEffect("Error: 获取当前时间失败\n");
+        typeWriterEffect("错误: 获取当前时间失败\n");
         return;
     }
     
     struct tm *current_time = localtime(&now);
     if (current_time == NULL) {
-        typeWriterEffect("Error: 转换时间格式失败\n");
+        typeWriterEffect("错误: 转换时间格式失败\n");
         return;
     }
     
     char time_str[20];
     if (strftime(time_str, sizeof(time_str), "%Y-%m-%d_%H-%M-%S", current_time) == 0) {
-        typeWriterEffect("Error: 格式化时间失败\n");
+        typeWriterEffect("错误: 格式化时间失败\n");
         return;
     }
     
@@ -169,7 +169,7 @@ if (mkdir("reports") != 0 && errno != EEXIST) {
 // Linux平台使用mkdir
 if (mkdir("reports", 0777) != 0 && errno != EEXIST) {
 #endif
-        typeWriterEffect("Warning: 创建reports目录失败（可能已存在）\n");
+        typeWriterEffect("警告: 创建reports目录失败（可能已存在）\n");
     }
     
     // 构建带时间戳的文件名
@@ -179,13 +179,13 @@ if (mkdir("reports", 0777) != 0 && errno != EEXIST) {
     // 打开输出文件
     FILE* outFile = fopen(filename, "w");
     if (!outFile) {
-        typeWriterEffect("Warning: 无法创建输出文件\n");
+        typeWriterEffect("警告: 无法创建输出文件\n");
         return;
     }
     
     // 写入报告标题
-    fprintf(outFile, "=== Code Statistics Report ===\n");
-    fprintf(outFile, "Generated: %s\n", time_str);
+    fprintf(outFile, "=== 代码统计报告 ===\n");
+    fprintf(outFile, "生成时间: %s\n", time_str);
     fprintf(outFile, "============================\n\n");
     
     // 递归查找源文件并统计
@@ -200,7 +200,7 @@ if (mkdir("reports", 0777) != 0 && errno != EEXIST) {
     
     // 写入总计
     fprintf(outFile, "\n------------------------\n");
-    fprintf(outFile, "Total: %ld lines\n", total);
+    fprintf(outFile, "总计行数: %ld 行\n", total);
     
     // 清理资源
     fclose(outFile);
@@ -208,7 +208,7 @@ if (mkdir("reports", 0777) != 0 && errno != EEXIST) {
     
     // 显示保存路径信息
     char info_msg[256];
-    snprintf(info_msg, sizeof(info_msg), "\nReport generated successfully at %s\n", filename);
+    snprintf(info_msg, sizeof(info_msg), "\n报告生成成功，路径为 %s\n", filename);
     typeWriterEffect(info_msg);
 }
 

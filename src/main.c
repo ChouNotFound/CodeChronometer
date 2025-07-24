@@ -12,12 +12,13 @@
 
 int main() 
 {
+    SetConsoleOutputCP(CP_UTF8);
     while (1) 
     {
-        typeWriterEffect("\n=== Code Statistics System ===\n");
-        typeWriterEffect("1. Run code statistics\n");
-        typeWriterEffect("2. Exit\n");
-        typeWriterEffect("Enter your choice (1-2): ");
+        typeWriterEffect("\n=== 代码统计系统 ===\n");
+        typeWriterEffect("1. 执行代码统计\n");
+        typeWriterEffect("2. 退出\n");
+        typeWriterEffect("请输入你的选择 (1-2): ");
         
         int choice;
         (void)scanf("%d", &choice);
@@ -30,10 +31,10 @@ int main()
             case 1:
                 {
                 // 添加路径选择逻辑
-                typeWriterEffect("\nChoose path option:\n");
-                typeWriterEffect("1. Current directory\n");
-                typeWriterEffect("2. Custom path\n");
-                typeWriterEffect("Enter your choice (1-2): ");
+                typeWriterEffect("\n请选择路径选项:\n");
+                typeWriterEffect("1. 当前目录\n");
+                typeWriterEffect("2. 自定义路径\n");
+                typeWriterEffect("请输入你的选择 (1-2): ");
                 
                 int path_choice;
                 (void)scanf("%d", &path_choice);
@@ -43,13 +44,13 @@ int main()
                 char path[1024] = ".."; // 默认路径
                 
                 if (path_choice == 2) {
-                    typeWriterEffect("\nEnter custom path: ");
+                    typeWriterEffect("\n请输入自定义路径: ");
                     (void)fgets(path, sizeof(path), stdin);
                     // 移除末尾换行符
                     path[strcspn(path, "\n")] = '\0';
                 }
                 
-                typeWriterEffect("\nDo you want to generate a report? (y/n): ");
+                typeWriterEffect("\n是否生成报告? (y/n): ");
                 char report_choice;
                 (void)scanf(" %c", &report_choice);
                 if (report_choice == 'y' || report_choice == 'Y') 
@@ -61,7 +62,7 @@ int main()
                 run_code_count(path);
                 
                 // 统计结束后显示感谢信息并等待退出
-                typeWriterEffect("\nThank you for using this program. Goodbye!");
+                typeWriterEffect("\n感谢使用本程序。再见!");
                 #ifdef _WIN32
                 _getch();
                 #else
@@ -71,7 +72,7 @@ int main()
                 }
             
             case 2:
-                typeWriterEffect("\nThank you for using this program. Goodbye!");
+                typeWriterEffect("\n感谢使用本程序。再见!");
                 #ifdef _WIN32
                 // 先等待按键再退出
                 _getch();
@@ -81,7 +82,7 @@ int main()
                 return 0;
             
             default:
-                typeWriterEffect("\nInvalid choice. Please enter a number between 1 and 2\n");
+                typeWriterEffect("\n无效选择。请输入1到2之间的数字\n");
         }
     }
     
