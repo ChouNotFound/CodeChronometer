@@ -37,11 +37,17 @@
 ```
 
 ## 开发环境配置
-### Windows环境（推荐使用Chocolatey包管理器）
-```powershell
-choco install cmake
-gsudo choco install mingw -params "AddToPath"
+### Windows环境（推荐使用MSYS64）
+1. 下载安装MSYS2：https://www.msys2.org/
+2. 更新包数据库：
+```bash
+pacman -Syu
 ```
+3. 安装必要工具链：
+```bash
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make
+```
+4. 将MSYS2的`mingw64/bin`目录添加到系统PATH环境变量
 
 ### Linux环境（Ubuntu/Debian）
 ```bash
@@ -50,6 +56,17 @@ sudo apt-get install build-essential cmake
 ```
 
 ## 构建指南
+### Windows构建命令（MSYS2 MinGW64环境）
+```bash
+# 创建并进入构建目录
+cd code
+cmake -B build -S . -G "MinGW Makefiles"
+
+# 执行构建
+mingw32-make -C build
+```
+
+### Linux构建命令
 ```bash
 # 创建并进入构建目录
 cd code
@@ -64,8 +81,6 @@ cmake --build build
 1. 📊 运行代码统计
 2. 📁 生成统计报告
 3. 🚪 退出程序
-
-程序执行完成后会显示"Press any key to return to menu..."提示，支持任意键返回主菜单。
 
 ## 技术规范
 - **代码规范**：遵循C11标准，启用-Wall -Wextra警告选项
