@@ -98,6 +98,10 @@ void run_code_count()
     {
         typeWriterEffect("Warning: 无法创建输出文件\n");
     }
+    else
+    {
+        typeWriterEffect("结果已保存到code_stats.txt\n");
+    }
     
     // 递归查找源文件
     findAllSubDirsForSourceFiles("..", &total, &fileList);
