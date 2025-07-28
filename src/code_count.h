@@ -1,7 +1,7 @@
 #ifndef CODE_COUNT_H
 #define CODE_COUNT_H
 
-#include "typewriter.h"
+#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +16,7 @@
 #include <dirent.h>
 #endif
 
+// MAX宏定义（路径缓冲区大小）
 #define MAX 1024
 
 typedef struct {

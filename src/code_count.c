@@ -4,27 +4,14 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#include <conio.h>  // Windows平台需要_conio.h头文件
-#include <direct.h>  // Windows平台需要_direct.h头文件用于_mkdir
 #else
 #include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>  // Linux平台需要的头文件
 #endif
 
 // 辅助函数声明
-static int peekc(FILE *fp);
 static void safePathConcat(char *dest, size_t size, const char *path1, const char *path2);
 static void addFileToList(FileList* fileList, const char* filename, long line_count);
 static void printFileList(const FileList* fileList, FILE* outFile);
-
-// 读取文件中的下一个字符并放回，用于注释处理
-int peekc(FILE *fp)
-{
-    int ch = fgetc(fp);
-    ungetc(ch, fp);
-    return ch;
-}
 
 // 安全拼接路径字符串，自动处理不同平台的路径分隔符
 void safePathConcat(char *dest, size_t size, const char *path1, const char *path2)
@@ -47,6 +34,15 @@ void safePathConcat(char *dest, size_t size, const char *path1, const char *path
     #endif
     strncat(dest, path2, size-strlen(dest)-1);
 }
+
+// 读取文件中的下一个字符并放回，用于注释处理
+int peekc(FILE *fp)
+{
+    int ch = fgetc(fp);
+    ungetc(ch, fp);
+    return ch;
+}
+
 
 // 将文件信息添加到文件列表中，自动扩展内存容量
 void addFileToList(FileList* fileList, const char* filename, long line_count)
@@ -97,7 +93,7 @@ void printFileList(const FileList* fileList, FILE* outFile)
         snprintf(line, sizeof(line), "%-20s %ld 行\n", display_name, fileList->data[i].line_count);
         
         // 打字机效果输出
-        typeWriterEffect(line);
+        typeWriterPrintf(line);
         
         // 如果有文件句柄则写入文件
         if (outFile)
@@ -117,16 +113,16 @@ void run_code_count(const char *path)
     findAllSubDirsForSourceFiles(path, &total, &fileList);
     
     // 打印标题
-    typeWriterEffect("\n=== 代码统计报告 ===\n");
+    typeWriterPrintf("\n=== 代码统计报告 ===\n");
     
     // 打印文件列表
     printFileList(&fileList, NULL);
     
-    typeWriterEffect("------------------------\n");
+    typeWriterPrintf("------------------------\n");
     
     char total_line[50];
     snprintf(total_line, sizeof(total_line), "总计行数: %ld 行\n", total);
-    typeWriterEffect(total_line);
+    typeWriterPrintf(total_line);
     
     // 等待2秒
     #ifdef _WIN32
@@ -145,19 +141,19 @@ void generate_report() {
     // 获取当前时间
     time_t now = time(NULL);
     if (now == (time_t)(-1)) {
-        typeWriterEffect("错误: 获取当前时间失败\n");
+        typeWriterPrintf("错误: 获取当前时间失败\n");
         return;
     }
     
     struct tm *current_time = localtime(&now);
     if (current_time == NULL) {
-        typeWriterEffect("错误: 转换时间格式失败\n");
+        typeWriterPrintf("错误: 转换时间格式失败\n");
         return;
     }
     
     char time_str[20];
     if (strftime(time_str, sizeof(time_str), "%Y-%m-%d_%H-%M-%S", current_time) == 0) {
-        typeWriterEffect("错误: 格式化时间失败\n");
+        typeWriterPrintf("错误: 格式化时间失败\n");
         return;
     }
     
@@ -169,7 +165,7 @@ if (mkdir("reports") != 0 && errno != EEXIST) {
 // Linux平台使用mkdir
 if (mkdir("reports", 0777) != 0 && errno != EEXIST) {
 #endif
-        typeWriterEffect("警告: 创建reports目录失败（可能已存在）\n");
+        typeWriterPrintf("警告: 创建reports目录失败（可能已存在）\n");
     }
     
     // 构建带时间戳的文件名
@@ -179,7 +175,7 @@ if (mkdir("reports", 0777) != 0 && errno != EEXIST) {
     // 打开输出文件
     FILE* outFile = fopen(filename, "w");
     if (!outFile) {
-        typeWriterEffect("警告: 无法创建输出文件\n");
+        typeWriterPrintf("警告: 无法创建输出文件\n");
         return;
     }
     
@@ -209,7 +205,7 @@ if (mkdir("reports", 0777) != 0 && errno != EEXIST) {
     // 显示保存路径信息
     char info_msg[256];
     snprintf(info_msg, sizeof(info_msg), "\n报告生成成功，路径为 %s\n", filename);
-    typeWriterEffect(info_msg);
+    typeWriterPrintf(info_msg);
 }
 
 // 跨平台目录遍历函数：递归查找所有源代码文件
@@ -309,7 +305,7 @@ int countLines(const char *filename)
         // 修改错误处理逻辑，添加更详细的错误信息
         char error_msg[256];
         snprintf(error_msg, sizeof(error_msg), "无法打开文件: %s\n", filename);
-        typeWriterEffect(error_msg);
+        typeWriterPrintf(error_msg);
         return 0;
     }
 
