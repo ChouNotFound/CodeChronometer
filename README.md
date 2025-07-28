@@ -19,15 +19,14 @@
 ## 技术架构
 ### 系统架构层次
 ```
-├── include/        # 模块化头文件
-│   ├── code_count.h    # 代码统计接口
-│   └── typewriter.h    # 动画输出接口
 ├── scripts/        # 辅助脚本
 │   └── count.py        # Python辅助脚本
 ├── src/            # 核心源代码
 │   ├── code_count.c    # 多语言代码统计算法
+│   ├── code_count.h    # 代码统计接口
 │   ├── main.c          # 程序入口及交互逻辑
-│   └── typewriter.c    # 跨平台动画输出引擎
+│   ├── utils.c         # 工具函数实现
+│   └── utils.h         # 工具函数接口
 └── README.md       # 项目说明文件
 ```
 
