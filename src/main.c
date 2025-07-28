@@ -1,11 +1,11 @@
-// main.c
 #include "code_count.h"
 #include "utils.h"
 #include <stdio.h>
+#include <conio.h>
+#include <direct.h>
 
 #ifdef _WIN32
 #include <windows.h>
-#include <conio.h>  // Windows平台需要_conio.h头文件
 #else
 #include <unistd.h>
 #endif
@@ -21,10 +21,11 @@ int main()
         typeWriterPrintf("请输入你的选择 (1-2): ");
         
         int choice;
-        (void)scanf("%d", &choice);
-        
-        int c;
-        while ((c = getchar()) != '\n' && c != EOF);
+        // 使用输入验证函数改进用户交互
+        while (!get_valid_input(&choice) || (choice < 1 || choice > 2)) 
+        {
+            typeWriterPrintf("\n输入无效，请输入1或2：");
+        }
 
         switch (choice) 
         {
@@ -37,16 +38,20 @@ int main()
                 typeWriterPrintf("请输入你的选择 (1-2): ");
                 
                 int path_choice;
-                (void)scanf("%d", &path_choice);
+                // 使用输入验证函数改进用户交互
+                while (!get_valid_input(&path_choice) || (path_choice < 1 || path_choice > 2)) 
+                {
+                    typeWriterPrintf("\n输入无效，请输入1或2：");
+                }
                 
-                while ((c = getchar()) != '\n' && c != EOF);
-                
-                char path[1024] = ".."; // 默认路径
+                char path[1024]; // 路径缓冲区
+                strcpy(path, ".."); // 默认路径
                 
                 if (path_choice == 2) 
                 {
                     typeWriterPrintf("\n请输入自定义路径: ");
                     (void)fgets(path, sizeof(path), stdin);
+                    // 移除末尾换行符
                     path[strcspn(path, "\n")] = '\0';
                 }
                 
@@ -60,31 +65,11 @@ int main()
                 
                 // 执行代码统计，使用选择的路径
                 run_code_count(path);
-                
-                // 统计结束后显示感谢信息并等待退出
-                typeWriterPrintf("\n感谢使用本程序。再见!");
-                #ifdef _WIN32
-                _getch();
-                #else
-                getchar();
-                #endif
-                return 0; // 直接退出程序
                 }
             
             case 2:
-                typeWriterPrintf("\n感谢使用本程序。再见!");
-                #ifdef _WIN32
-                // 先等待按键再退出
-                _getch();
-                #else
-                getchar();
-                #endif
+                typeWriterPrintf("\n感谢使用本程序，再见!");
                 return 0;
-            
-            default:
-                typeWriterPrintf("\n无效选择。请输入1到2之间的数字\n");
         }
     }
-    
-    return 0;
 }

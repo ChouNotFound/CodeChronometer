@@ -10,7 +10,7 @@ void typeWriterEffect(const char* str);
 // 格式化打字机效果输出
 void typeWriterPrintf(const char* format, ...);
 
-// 通用输入验证函数
-int get_valid_input(double *value);
+// 输入验证函数
+int get_valid_input(int *value);
 
 #endif // UTILS_H

@@ -40,24 +40,24 @@ void typeWriterPrintf(const char* format, ...)
     typeWriterEffect(buffer);
 }
 
-// 通用输入验证函数未被使用，已移除
-// int get_valid_input(double *value) 
-// {
-//     while(1) 
-//     {
-//         if(scanf("%lf", value) == 1) 
-//         {
-//             // 清除可能的多余输入
-//             int c;
-//             while((c = getchar()) != '\n' && c != EOF);
-//             return 1;
-//         } 
-//         else 
-//         {
-//             // 清除无效输入
-//             int c;
-//             while((c = getchar()) != '\n' && c != EOF);
-//             typeWriterPrintf("\n输入无效，请输入数字：");
-//         }
-//     }
-// }
+// 通用输入验证函数
+int get_valid_input(int *value) 
+{
+    while(1) 
+    {
+        if(scanf("%d", value) == 1) 
+        {
+            // 清除可能的多余输入
+            int c;
+            while((c = getchar()) != '\n' && c != EOF);
+            return 1;
+        } 
+        else 
+        {
+            // 清除无效输入
+            int c;
+            while((c = getchar()) != '\n' && c != EOF);
+            typeWriterPrintf("\n输入无效，请输入整数：");
+        }
+    }
+}
